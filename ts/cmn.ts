@@ -2,7 +2,7 @@ import { replaceEach } from "./string.js";
 
 export const pinyinToSyllables = (text: string): string[] => {
   const vowel = "īíǐìiǖǘǚǜüūúǔùuēéěèeōóǒòoāáǎàa";
-  const toned = "īíǐìǖǘǚǜūúǔùēéěèōóǒòāáǎà";
+  const toned = vowel.replace(/[iüueoa]/g, "");
   const e = "ēéěèe";
 
   let syllables = [text.toLowerCase().normalize("NFKC")];
@@ -12,25 +12,26 @@ export const pinyinToSyllables = (text: string): string[] => {
     // consonant|consonant
     "(?=[ywkjqxzcsldtbpfm])",
     "(?<![zcs])(?=h)",
-    "(?<=n)(?=n)",
-    "(?<=g)(?=g)",
+    "(?<=n)(?=[hn])",
+    "(?<=g)(?=[ghn])",
+    "(?<=r)(?=[ghrn])",
+    // r|consonant
+    `(?<=[${vowel}](ng?)?r)(?![${vowel}])`,
     // |er|
-    `(?=[ēéěèe]r(?![${vowel}]))`,
-    `(?<=[ēéěèe]r)(?![${vowel}])`,
+    //`(?=[ēéěèe]r(?![${vowel}]))`,
     // vowel-vowel
-    `(?<=[${e}āáǎàa]i)`,
-    "(?<=[āáǎàa]o)",
-    "(?<=[ōóǒòo]u)",
-    "(?<=i[ūúǔùu])",
-    "(?<=u[īíǐìi])",
+    `(?<=[${e}]ir?)`,
+    `(?<=[ōóǒòo]ur?)`,
+    `(?<=[āáǎàa][io]r?)`,
+    `(?<=i[ūúǔùu]r?)`,
+    `(?<=u[īíǐìi]r?)`,
     // other
-    `(?<![${e}])(?=r)`,
+    `(?=r[${vowel}])`,
     `(?=n[${vowel}])`,
-    `(?<=ng)(?![iu${toned}])`,
+    `(?<=n)(?=g[${vowel}])`,
+    `(?=g[${toned}])`,
     `(?<=[${vowel}])(?=g)`,
-    `(?=g[iu${toned}])`,
     `(?<=[${e}])(?=r[${vowel}])`,
-    `(?=${e}r(?![${vowel}]))`,
     `(?<=[${toned}])(?=[${toned}])`,
   ])
     syllables = syllables
@@ -81,19 +82,19 @@ export const pinyinSyllableToObject = (
     [/o/, "e"],
     [/(?<=[iyu])e(?=[iu]|ng?)/, ""],
 
-    [/^zh/, "ẓ"],
-    [/^ch/, "ṭ"],
-    [/^sh/, "ṣ"],
+    [/^zh/, "ż"],
+    [/^ch/, "ṫ"],
+    [/^sh/, "ṡ"],
     [/^z/, "z"],
     [/^c/, "ţ"],
     [/^g/, "c"],
     [/ng$/, "g"],
 
-    [/(?<=^[ẓṭṣrzţs])i/g, ""],
+    [/(?<=^[ẓṭṣzţs])i/g, ""],
   ]);
 
   const [initial, medial, nucleus, coda] = syllable
-    .match(/^([ckhẓṭṣrzţsldtnbpfm]?)([iyu]?)([ea]?)([iugnr]?)$/)!
+    .match(/^([ckhẓṭṣrzţsldtnbpfm]?)([iyu]?)([ea]?)([iugn]?r?)$/)!
     .slice(1);
 
   const diacritics = ["\u0304", "\u0301", "\u030C", "\u0300", ""];
