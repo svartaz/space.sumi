@@ -1,2 +1,1 @@
-/** @type {<A>(they:A[]) => A} */
-export const chooseRandom = (they) => they[Math.random() * they.length];
+export const chooseRandom = (ones) => ones[Math.random() * ones.length];
