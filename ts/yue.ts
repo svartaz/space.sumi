@@ -7,8 +7,8 @@ export const jyutpingSyllableToObject = (
   final: string;
   tone: number;
   voiced: boolean;
-  alphabetic: string;
-  diacritic: string;
+  text: string;
+  compact: string;
 } => {
   let [initial, final, toneString] = syllable
     .toLowerCase()
@@ -49,9 +49,10 @@ export const jyutpingSyllableToObject = (
 
   final = replaceEach(final!, [
     [/ng$/, "g"],
-    [/(?<!a)a(?!a)/g, "ǝ"],
+    [/oe|eo/, "ô"],
+    [/e/, "ê"],
+    [/(?<!a)a(?!a)/g, "e"],
     [/aa/, "a"],
-    [/oe|eo/, "ø"],
     [/yu/, "y"],
     [/(?<!^)i$/, "j"],
     [/(?<!^)u$/, "w"],
@@ -69,7 +70,7 @@ export const jyutpingSyllableToObject = (
     ]);
   else initial = initial.replace(/^(?=[gnmljw]?$)/, "q");
 
-  if (/^[iyø]/.test(final)) initial = initial.replace(/j$/, "");
+  if (/^[iyô]/.test(final)) initial = initial.replace(/j$/, "");
   else if (/^u/.test(final)) initial = initial.replace(/w$/, "");
 
   initial = replaceEach(initial, [
@@ -88,11 +89,11 @@ export const jyutpingSyllableToObject = (
     final,
     tone,
     voiced,
-    alphabetic: initial + final + ["", "q", "s", ""][tone],
-    diacritic: /^(g|m)$/.test(initial + final)
-      ? initial + final + ["ˋ", "ˊ", "ˉ", ""][tone]
+    text: initial + final + ["", "q", "s", ""][tone],
+    compact: /^(g|m)$/.test(initial + final)
+      ? initial + final + ["ˋ", "ˊ", "˜", ""][tone]
       : (initial + final)
-          .replace(/(?<=[iyueøǝoa])/, ["\u0300", "\u0301", "\u0304", ""][tone]!)
+          .replace(/(?<=[iyuêôeoa])/, ["\u0300", "\u0301", "\u0303", ""][tone]!)
           .normalize("NFKC"),
   };
 };

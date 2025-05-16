@@ -36,9 +36,10 @@ export const jyutpingSyllableToObject = (syllable) => {
     ]);
     final = replaceEach(final, [
         [/ng$/, "g"],
-        [/(?<!a)a(?!a)/g, "ǝ"],
+        [/oe|eo/, "ô"],
+        [/e/, "ê"],
+        [/(?<!a)a(?!a)/g, "e"],
         [/aa/, "a"],
-        [/oe|eo/, "ø"],
         [/yu/, "y"],
         [/(?<!^)i$/, "j"],
         [/(?<!^)u$/, "w"],
@@ -55,7 +56,7 @@ export const jyutpingSyllableToObject = (syllable) => {
         ]);
     else
         initial = initial.replace(/^(?=[gnmljw]?$)/, "q");
-    if (/^[iyø]/.test(final))
+    if (/^[iyô]/.test(final))
         initial = initial.replace(/j$/, "");
     else if (/^u/.test(final))
         initial = initial.replace(/w$/, "");
@@ -74,11 +75,11 @@ export const jyutpingSyllableToObject = (syllable) => {
         final,
         tone,
         voiced,
-        alphabetic: initial + final + ["", "q", "s", ""][tone],
-        diacritic: /^(g|m)$/.test(initial + final)
-            ? initial + final + ["ˋ", "ˊ", "ˉ", ""][tone]
+        text: initial + final + ["", "q", "s", ""][tone],
+        compact: /^(g|m)$/.test(initial + final)
+            ? initial + final + ["ˋ", "ˊ", "˜", ""][tone]
             : (initial + final)
-                .replace(/(?<=[iyueøǝoa])/, ["\u0300", "\u0301", "\u0304", ""][tone])
+                .replace(/(?<=[iyuêôeoa])/, ["\u0300", "\u0301", "\u0303", ""][tone])
                 .normalize("NFKC"),
     };
 };
