@@ -26,7 +26,7 @@ export const dateToObject = (date) => {
         day,
         unix: (date.getTime() - new Date("1970-01-01T00:00Z").getTime()) /
             (24 * 60 * 60 * 1000),
-        text: `${year}d${Math.floor(day).toString().padStart(3, "0")}`,
+        text: `${year}_${Math.floor(day).toString().padStart(3, "0")}`,
     };
 };
 export const yearDayToDate = (year, day) => new Date(year, 0, 1, 0, 0, 0, day * 24 * 60 * 60 * 1000);
