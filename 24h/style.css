@@ -1,0 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic&display=swap');
+
+body {
+  display: flex;
+  flex-direction: column;
+  font-family: 'Zen Maru Gothic'
+}
+
+canvas {
+  width: 480px;
+  height: 480px;
+}
+
+textarea {
+  width: 100%;
+  min-width: 480px;
+  height: 320px;
+  resize: none;
+  outline: none;
+}
+
+div {
+  color: red;
+}

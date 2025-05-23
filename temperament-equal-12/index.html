@@ -1,0 +1,347 @@
+<html>
+  <head>
+    <title>12ET</title>
+    <meta name="viewport" content="user-scalable=no" />
+
+    <style>
+      button {
+        appearance: none;
+        -webkit-appearance: none;
+      }
+
+      button:focus {
+        outline: 0;
+      }
+
+      body {
+        display: grid;
+        grid-template-columns: 3fr 2fr 1fr 1fr 1fr;
+        grid-template-rows: calc(100% / 8) 1fr;
+        gap: 1rex;
+
+        touch-action: none;
+      }
+
+      label {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      #played,
+      #chord {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        flex-wrap: wrap;
+        column-gap: 1rex;
+      }
+
+      #keys {
+        grid-column: 1/-1;
+        background-color: black;
+
+        display: grid;
+        grid-template-rows: 1fr 1fr;
+        gap: 1px;
+      }
+
+      #keys button {
+        -webkit-user-select: none;
+        user-select: none;
+        border: none;
+        inline-size: 100%;
+        block-size: 100% / 9;
+      }
+
+      #keys button.white {
+        background-color: white;
+      }
+
+      #keys button.black {
+        background-color: gray;
+      }
+
+      #keys button.played.white {
+        background-color: lime;
+      }
+
+      #keys button.played.black {
+        background-color: forestgreen;
+      }
+
+      #keys button.c4 {
+        background: repeating-linear-gradient(
+          45deg,
+          white,
+          white 2rex,
+          lightgray 2rex,
+          lightgray 3rex
+        );
+      }
+      #keys button.played.c4 {
+        background: repeating-linear-gradient(
+          45deg,
+          palegreen,
+          palegreen 2rex,
+          seagreen 2rex,
+          seagreen 3rex
+        );
+      }
+    </style>
+
+    <script>
+      const divisor = 12;
+      const context = new AudioContext();
+
+      const attributes = [
+        ["C", "white"],
+        ["C♯", "black"],
+        ["D", "white"],
+        ["D♯", "black"],
+        ["E", "white"],
+        ["F", "white"],
+        ["F♯", "black"],
+        ["G", "white"],
+        ["G♯", "black"],
+        ["A", "white"],
+        ["A♯", "black"],
+        ["B", "white"],
+      ];
+
+      const keyboard = [
+        [..."1234567890-="],
+        [..."qwertyuiop[]\\"],
+        [..."asdfghjkl;'"],
+        [..."zxcvbnm,./"],
+      ];
+      const oscillators = {};
+      const gains = {};
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const onChange = () => {
+          const divPlayed = document.getElementById("played");
+          divPlayed.innerHTML = "";
+          Object.values(oscillators)
+            .map((o) => o.frequency.value)
+            .sort((a, b) => a - b)
+            .forEach((f) => {
+              const span = document.createElement("span");
+              span.textContent = f.toFixed(3);
+              divPlayed.appendChild(span);
+            });
+
+          const numbers = Object.keys(oscillators)
+            .map((it) => parseInt(it))
+            .sort((a, b) => a - b);
+          const chords = [];
+
+          for (const [k, ds] of Object.entries({
+            min7: [3, 10],
+            har7: [4, 10],
+            maj7: [4, 11],
+
+            sus2: [2, 7],
+            dim: [3, 6],
+            min: [3, 7],
+            maj: [4, 7],
+            aug: [4, 8],
+            sus4: [5, 7],
+          }))
+            for (const number of numbers)
+              if (
+                ds.every(
+                  (d) =>
+                    numbers.includes(number + d - 12) ||
+                    numbers.includes(number + d) ||
+                    numbers.includes(number + d + 12)
+                )
+              ) {
+                const chord = `${
+                  attributes[((number % divisor) + divisor) % divisor][0]
+                }${k}`;
+                if (!chords.includes(chord) && !chords.includes(chord + "7"))
+                  chords.push(chord);
+              }
+
+          const divChord = document.getElementById("chord");
+          divChord.innerHTML = "";
+          for (const c of chords) {
+            const span = document.createElement("span");
+            span.textContent = c;
+            divChord.appendChild(span);
+          }
+
+          draw();
+        };
+
+        const start = (number, frequency) => {
+          if (!oscillators.hasOwnProperty(number)) {
+            const g = new GainNode(context, { gain: 1 / 6 });
+            const o = new OscillatorNode(context, {
+              type: "sine",
+              frequency,
+            });
+
+            o.connect(g);
+            g.connect(analyser);
+            o.start();
+            [oscillators[number], gains[number]] = [o, g];
+            for (const e of document.querySelectorAll(
+              `[data-number="${number}"]`
+            ))
+              e.classList.add("played");
+
+            setTimeout(onChange, 50);
+          }
+        };
+
+        const stop = (number) => {
+          if (oscillators.hasOwnProperty(number)) {
+            gains[number].gain.linearRampToValueAtTime(
+              0,
+              context.currentTime + 10 / 1000
+            );
+            oscillators[number].stop(context.currentTime + 20 / 1000);
+            delete oscillators[number];
+            delete gains[number];
+
+            for (const e of document.querySelectorAll(
+              `[data-number="${number}"]`
+            ))
+              e.classList.remove("played");
+
+            setTimeout(onChange, 75);
+          }
+        };
+
+        const freqA4 = 440;
+        const numberA4 = 69;
+
+        const n = 36;
+        const numberMin = 66 - Math.floor(n / 2);
+        for (let i = 0; i < 36; i++) {
+          const number = numberMin + i;
+          const klass = number % divisor;
+          const octave = Math.floor(number / divisor) - 1;
+          const freq = freqA4 * Math.pow(2, (number - numberA4) / divisor);
+
+          const button = document.createElement("button");
+          button.classList.add(attributes[klass][1]);
+          button.dataset.number = number;
+
+          button.innerHTML =
+            attributes[klass][0] +
+            `<sub>${octave}</sub><br / ><span style='font-size: smaller;'>${number}<br />${freq.toFixed(
+              3
+            )}/s</span>`;
+
+          button.style.gridArea = [
+            1 - (number % 2) + 1,
+            i + 1,
+            "span 1",
+            "span 2",
+          ].join("/");
+
+          if (number === 60) button.classList.add("c4");
+
+          const onDown = () => {
+            if (document.getElementById("sustain").checked)
+              if (number in oscillators) stop(number);
+              else start(number, freq);
+            else start(number, freq);
+          };
+          const onUp = () => {
+            if (document.getElementById("sustain").checked) {
+              // pass
+            } else stop(number);
+          };
+
+          if (matchMedia("(pointer:coarse)").matches) {
+            button.onpointerdown = onDown;
+            button.onpointerenter = onDown;
+
+            button.onpointerup = onUp;
+            button.onpointerleave = onUp;
+            button.onpointercancel = onUp;
+          } else {
+            button.onmousedown = onDown;
+
+            button.onmouseup = onUp;
+            button.onmouseleave = onUp;
+          }
+
+          document.addEventListener("keydown", (event) => {
+            //if (event.key === keyboard?.[y - 4]?.[x - 7]) onDown();
+          });
+          document.addEventListener("keyup", (event) => {
+            //if (event.key === keyboard?.[y - 4]?.[x - 7]) onUp();
+          });
+
+          document.getElementById("keys").append(button);
+        }
+
+        const stopAll = () => {
+          for (const number in oscillators) stop(number);
+        };
+
+        document.getElementById("stop-all").onclick = stopAll;
+        document.addEventListener("keypress", (event) => {
+          if (event.key === " ") document.getElementById("stop-all").click();
+          else if (event.key === "Enter")
+            document.getElementById("sustain").click();
+        });
+
+        const analyser = context.createAnalyser();
+        analyser.connect(context.destination);
+
+        analyser.fftSize = 2048;
+        const length = analyser.frequencyBinCount;
+        const array = new Uint8Array(length);
+        analyser.getByteTimeDomainData(array);
+
+        const [canvas] = document.getElementsByTagName("canvas");
+        const rect = canvas.getBoundingClientRect();
+
+        const scale = 2;
+        const canvasContext = canvas.getContext("2d");
+        canvas.height = rect.height * scale;
+        canvas.width = rect.width * scale;
+
+        const draw = () => {
+          //requestAnimationFrame(draw);
+
+          analyser.getByteTimeDomainData(array);
+          canvasContext.clearRect(0, 0, canvas.width, canvas.height);
+          canvasContext.lineWidth = scale;
+          canvasContext.strokeStyle = "black";
+          canvasContext.lineJoin = "round";
+          canvasContext.beginPath();
+          const sliceWidth = canvas.width / length;
+
+          for (let i = 0; i < length; i++) {
+            const x = (canvas.width / length) * i;
+            const y = ((array[i] / 128.0) * canvas.height) / 2;
+
+            if (i === 0) canvasContext.moveTo(x, y);
+            else canvasContext.lineTo(x, y);
+          }
+
+          canvasContext.stroke();
+        };
+
+        draw();
+      });
+    </script>
+  </head>
+
+  <body>
+    <canvas></canvas>
+    <div id="played"></div>
+    <div id="chord"></div>
+    <label><input id="sustain" type="checkbox" /> sustain (enter)</label>
+    <button id="stop-all">stop all (space)</button>
+    <div id="keys"></div>
+  </body>
+</html>

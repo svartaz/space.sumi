@@ -1,5 +1,5 @@
 import { replaceEach } from "./string.js";
-export const jyutpingSyllableToObject = (syllable) => {
+export const jyutpingSyllableToObject = (syllable, hanz = null, TshetUinh = null) => {
     let [initial, final, toneString] = syllable
         .toLowerCase()
         .normalize("NFKC")
@@ -70,6 +70,34 @@ export const jyutpingSyllableToObject = (syllable) => {
         [/^ḑx/, "ḏ"],
         [/^bx/, "ƀ"],
     ]);
+    if (hanz && TshetUinh) {
+        const mc = TshetUinh.資料.query字頭(hanz);
+        console.log(mc);
+        if (mc.length) {
+            if (mc.every((it) => "孃日泥".includes(it.音韻地位?.母)))
+                initial = /^[iyô]/.test(final)
+                    ? initial.replace(/(?<=^q?)$/, "nj")
+                    : initial.replace(/(?<=^q?)j$/, "nj");
+            else if (mc.every((it) => "疑" === it.音韻地位?.母))
+                initial = initial.replace(/(?<=^q?)(?=(|j|v)$)/, "g");
+            else if (mc.every((it) => "匣云曉見溪".includes(it.音韻地位?.母)))
+                initial = initial
+                    .replace(/^q(?=(|j|v)$)/, "x")
+                    .replace(/^(?=(|j|v)$)/, "h");
+            else if (mc.every((it) => !"精清從心邪".includes(it.音韻地位?.母)))
+                initial = initial.replace(/(?<=^[ţḑṯḏsz])(?=$)/, "j");
+            if (mc.every((it) => "蟹止".includes(it.音韻地位?.韻)))
+                final = final.replace(/^ej$/, "uj");
+            else if (mc.every((it) => "灰".includes(it.音韻地位?.韻)))
+                final = final.replace(/^ôj$/, "uj");
+            else if (mc.every((it) => "模魚虞".includes(it.音韻地位?.韻)))
+                final = final.replace(/^ôj$/, "y").replace(/^ow$/, "u");
+            else if (mc.every((it) => "支脂之微".includes(it.音韻地位?.韻)))
+                final = final.replace(/^êj$/, "i");
+            else if (mc.every((it) => "覃談咸".includes(it.音韻地位?.韻)))
+                final = final.replace(/^e(?=[mp]$)/, "o");
+        }
+    }
     return {
         initial,
         final,

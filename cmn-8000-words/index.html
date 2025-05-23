@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>8000 mandarin words</title>
+    <meta
+      name="description"
+      content="mandarin and cantonese pronunciations of words in TOCFL 華語八千詞表"
+    />
+    <meta name="keywords" content="mandarin, cantonese" />
+    <meta name="author" content="sumi.space" />
+
+    <script>
+      var exports = {};
+    </script>
+    <script
+      src="https://unpkg.com/to-jyutping@3.1.1"
+      type="module"
+      defer
+    ></script>
+
+    <script type="module">
+      import data from "./8000mw.js";
+      import { replaceEach } from "https://sumi.space/js/string.js";
+      import { sleep } from "https://sumi.space/js/promise.js";
+      import {
+        pinyinSyllableToObject,
+        pinyinToSyllables,
+      } from "https://sumi.space/js/cmn.js";
+      import { jyutpingSyllableToObject } from "https://sumi.space/js/yue.js";
+
+      const pinyinToCmn = (pinyin) =>
+        pinyin.replace(/[\p{sc=Latn}']+/gu, (latn) =>
+          pinyinToSyllables(latn)
+            .map((it) => pinyinSyllableToObject(it).compact)
+            .join(" ")
+        );
+
+      const textToYue = (text) =>
+        exports
+          .getJyutpingList(text)
+          .map(([letter, read]) =>
+            read === null
+              ? "\t" + letter + "\t"
+              : jyutpingSyllableToObject(read).compact
+          )
+          .join(" ")
+          .replace(/ \t|\t /g, "");
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        document.getElementById("resume").addEventListener("click", () => {
+          window.speechSynthesis.resume();
+        });
+        document.getElementById("pause").addEventListener("click", () => {
+          window.speechSynthesis.pause();
+        });
+
+        document.querySelector("#index span").textContent = data.length;
+        for (const q of ["#index input", "input[type='range']"]) {
+          document.querySelector(q).max = data.length - 1;
+          document.querySelector(q).addEventListener("input", (event) => {
+            i = parseInt(event.target.value);
+          });
+        }
+
+        const speak = (lang, text) =>
+          new Promise((resolve, reject) => {
+            let u = new SpeechSynthesisUtterance(text);
+            u.lang = lang;
+            u.volume = 1;
+
+            const voices = window.speechSynthesis
+              .getVoices()
+              .filter((it) => it.lang === lang);
+            for (const voicesFiltered of [
+              voices.filter((it) => it.name.includes("Google")),
+              voices.filter((it) => it.voiceURI.includes("com.apple.voice.")),
+            ])
+              if (1 <= voicesFiltered.length) {
+                u.voice = voicesFiltered[0];
+                break;
+              }
+
+            u.onend = resolve;
+            u.onerror = reject;
+            window.speechSynthesis.speak(u);
+          });
+
+        let i =
+          parseInt(new URL(window.location.href).searchParams.get("i")) || 0;
+
+        const begin = async () => {
+          const u = new SpeechSynthesisUtterance("");
+          u.lang = "zh-TW";
+          window.speechSynthesis.speak(u);
+          document.getElementById("resume").removeEventListener("click", begin);
+
+          while (true) {
+            const url = new URL(window.location.href);
+            url.searchParams.set("i", i);
+            history.replaceState(history.state, "", url.href);
+
+            const prev = data[(data.length + i - 1) % data.length];
+            const curr = data[i];
+            const next = data[(i + 1) % data.length];
+
+            document.querySelector("input[type='range']").value = i;
+            document.querySelector("#index input").value = i;
+
+            document.getElementById("prev-level").textContent = prev[0];
+            document.getElementById("curr-level").textContent = curr[0];
+            document.getElementById("next-level").textContent = next[0];
+
+            document.getElementById("prev-category").textContent = prev[2];
+            document.getElementById("curr-category").textContent = curr[2];
+            document.getElementById("next-category").textContent = next[2];
+
+            document.getElementById("prev-word").textContent = prev[3].replace(
+              /\([˙ˋ\p{sc=Bopomofo}]+\)/gu,
+              ""
+            );
+            document.getElementById("curr-word").textContent = curr[3].replace(
+              /\([˙ˋ\p{sc=Bopomofo}]+\)/gu,
+              ""
+            );
+            document.getElementById("next-word").textContent = next[3].replace(
+              /\([˙ˋ\p{sc=Bopomofo}]+\)/gu,
+              ""
+            );
+
+            document.getElementById("prev-cmn").textContent = pinyinToCmn(
+              prev[4]
+            );
+            document.getElementById("curr-cmn").textContent = pinyinToCmn(
+              curr[4]
+            );
+            document.getElementById("next-cmn").textContent = pinyinToCmn(
+              next[4]
+            );
+
+            const w = curr[3].replace(/\([˙ˋ\p{sc=Bopomofo}]+\)/gu, "");
+            document.getElementById("prev-yue").textContent = textToYue(
+              prev[3].replace(/\([˙ˋ\p{sc=Bopomofo}]+\)/gu, "")
+            );
+            document.getElementById("curr-yue").textContent = textToYue(
+              curr[3].replace(/\([˙ˋ\p{sc=Bopomofo}]+\)/gu, "")
+            );
+            document.getElementById("next-yue").textContent = textToYue(
+              next[3].replace(/\([˙ˋ\p{sc=Bopomofo}]+\)/gu, "")
+            );
+
+            const cmnChecked = document.getElementById("cmn").checked;
+            const yueChecked = document.getElementById("yue").checked;
+
+            window.speechSynthesis.cancel();
+
+            if (cmnChecked) {
+              await speak("zh-TW", w);
+              await sleep(500);
+              await speak("zh-TW", w);
+              await sleep(500);
+            }
+
+            if (yueChecked) {
+              await speak("zh-HK", w);
+              await sleep(500);
+              await speak("zh-HK", w);
+              await sleep(500);
+            }
+
+            if (!cmnChecked && !yueChecked) await sleep(1000);
+
+            i = document.getElementById("random").checked
+              ? Math.floor(Math.random() * data.length)
+              : (i + 1) % data.length;
+          }
+        };
+        document.getElementById("resume").addEventListener("click", begin);
+      });
+    </script>
+
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@200..900&family=Noto+Serif:ital,wght@0,100..900;1,100..900&display=swap");
+
+      html,
+      body {
+        block-size: 100%;
+      }
+
+      body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 1em;
+
+        font-family: "Noto Serif", "Noto Serif TC", serif;
+      }
+
+      nav {
+        display: flex;
+        flex-direction: column;
+        gap: 1em;
+        align-items: center;
+
+        div {
+          display: flex;
+          flex-direction: row;
+          justify-content: space-evenly;
+          gap: 1em;
+        }
+      }
+
+      label {
+        display: flex;
+        gap: 0.2em;
+        align-items: center;
+        justify-content: center;
+      }
+
+      input {
+        font: inherit;
+      }
+
+      table {
+        block-size: fit-content;
+
+        caption {
+          font-style: italic;
+        }
+
+        td {
+          text-align: center;
+        }
+      }
+
+      main {
+        inline-size: 100%;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1em;
+
+        div {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+      }
+
+      [id$="word"] {
+        font-size: 500%;
+        block-size: 2em;
+      }
+
+      [id$="cmn"],
+      [id$="yue"] {
+        font-size: xx-large;
+      }
+
+      [id^="prev-"],
+      [id^="next-"] {
+        opacity: 0.25;
+      }
+    </style>
+  </head>
+
+  <body>
+    <nav>
+      <div>
+        <a href="https://sumi.space">sumi.space</a>
+        <a href="https://tocfl.edu.tw/tocfl/index.php/exam/download"
+          >華語八千詞表</a
+        >
+      </div>
+
+      <div style="inline-size: 100%">
+        <table>
+          <caption>
+            cmn consonant
+          </caption>
+          <tbody>
+            <tr>
+              <td></td>
+              <td>r</td>
+              <td>l</td>
+              <td>n</td>
+              <td>m</td>
+            </tr>
+            <tr>
+              <td>c</td>
+              <td>ẓ</td>
+              <td>z</td>
+              <td>d</td>
+              <td>b</td>
+            </tr>
+            <tr>
+              <td>k</td>
+              <td>ṭ</td>
+              <td>ţ</td>
+              <td>t</td>
+              <td>p</td>
+            </tr>
+            <tr>
+              <td>h</td>
+              <td>ṣ</td>
+              <td>s</td>
+              <td></td>
+              <td>f</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table>
+          <caption>
+            cmn vowel
+          </caption>
+          <tbody>
+            <tr>
+              <td>i</td>
+              <td>y</td>
+              <td>u</td>
+            </tr>
+            <tr>
+              <td colspN="3">e</td>
+            </tr>
+            <tr>
+              <td colspN="3">a</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table>
+          <caption>
+            cmn tone
+          </caption>
+          <tbody>
+            <tr>
+              <td>ˉ</td>
+              <td>ˊ</td>
+            </tr>
+            <tr colspan="2">
+              <td>ˇ</td>
+            </tr>
+            <tr colspan="2">
+              <td>ˋ</td>
+            </tr>
+            <tr colspan="2">
+              <td>◌</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table>
+          <caption>
+            yue consonant
+          </caption>
+          <tbody>
+            <tr>
+              <td></td>
+              <td>g</td>
+              <td></td>
+              <td>n</td>
+              <td>m</td>
+            </tr>
+            <tr>
+              <td>kw cw</td>
+              <td>k c</td>
+              <td>ţ ḑ</td>
+              <td>t d</td>
+              <td>p b</td>
+            </tr>
+            <tr>
+              <td>ꝁw ꞓw</td>
+              <td>ꝁ ꞓ</td>
+              <td>ṯ ḏ</td>
+              <td>ŧ đ</td>
+              <td>ꝑ ƀ</td>
+
+              <td></td>
+            </tr>
+            <tr>
+              <td></td>
+              <td>x h</td>
+              <td>s z</td>
+              <td></td>
+              <td>f v</td>
+            </tr>
+            <tr>
+              <td></td>
+              <td></td>
+              <td>j</td>
+              <td>l</td>
+              <td>w</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table>
+          <caption>
+            yue vowel
+          </caption>
+          <tbody>
+            <tr>
+              <td>i</td>
+              <td>y</td>
+              <td></td>
+              <td>u</td>
+            </tr>
+            <tr>
+              <td>ê</td>
+              <td>ô</td>
+              <td>e</td>
+              <td>o</td>
+            </tr>
+            <tr>
+              <td></td>
+              <td></td>
+              <td>a</td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table>
+          <caption>
+            yue tone
+          </caption>
+          <tbody>
+            <tr>
+              <td>◌</td>
+            </tr>
+            <tr>
+              <td>ˊ</td>
+            </tr>
+            <tr>
+              <td>˜</td>
+            </tr>
+            <tr>
+              <td>◌</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <label>
+          <input id="cmn" type="checkbox" checked="checked" /> cmn
+        </label>
+
+        <label>
+          <input id="yue" type="checkbox" checked="checked" /> yue
+        </label>
+
+        <label> <input id="random" type="checkbox" /> random </label>
+
+        <label id="index">
+          <input type="number" min="0" value="0" />/<span></span>
+        </label>
+
+        <button id="resume">⏵</button>
+        <button id="pause">⏸</button>
+      </div>
+
+      <input
+        type="range"
+        min="0"
+        style="grid-column: 1 / -1; inline-size: 100%"
+      />
+    </nav>
+
+    <main>
+      <div id="prev-level"></div>
+      <div id="curr-level"></div>
+      <div id="next-level"></div>
+
+      <div id="prev-category"></div>
+      <div id="curr-category"></div>
+      <div id="next-category"></div>
+
+      <div lang="zh-TW" id="prev-word"></div>
+      <div lang="zh-TW" id="curr-word"></div>
+      <div lang="zh-TW" id="next-word"></div>
+
+      <div id="prev-cmn"></div>
+      <div id="curr-cmn"></div>
+      <div id="next-cmn"></div>
+
+      <div id="prev-yue"></div>
+      <div id="curr-yue"></div>
+      <div id="next-yue"></div>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,447 @@
+<html>
+
+<head>
+  <title>31ET</title>
+  <meta name="viewport" content="user-scalable=no" />
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Music&display=swap');
+
+    :root {
+      --n-inline: 16;
+      --n-block: 8;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      block-size: 100%;
+    }
+
+    body {
+      font-family: 'Noto Music', sans-serif;
+      display: grid;
+      grid-template-columns: auto 2fr 2fr 1fr;
+      grid-template-rows: auto auto auto 1fr;
+      gap: 1rex;
+
+      touch-action: none;
+    }
+
+    button {
+      appearance: none;
+    }
+
+    button:focus {
+      outline: 0;
+    }
+
+    label {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    canvas#wave {
+      margin: auto;
+    }
+
+    canvas#wave,
+    #played,
+    #chord {
+      grid-row: span 2;
+    }
+
+    #played,
+    #chord {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      flex-wrap: wrap;
+      column-gap: 1rex;
+    }
+
+    #memo,
+    #keys {
+      grid-column: 1/-1;
+    }
+
+    #memo {
+      display: flex;
+    }
+
+    #memo div {
+      flex-grow: 1;
+      flex-basis: 0;
+      text-align: center;
+    }
+
+    #keys {
+      display: grid;
+      gap: 1px;
+      grid-template-columns: repeat(calc(2 * var(--n-inline) - 1), 1fr);
+      grid-template-rows: repeat(var(--n-block), 1fr);
+    }
+
+    #keys button {
+      -webkit-user-select: none;
+      user-select: none;
+      font: unset;
+      color: black;
+      border: none;
+      overflow: hidden;
+    }
+
+    #keys button.played {
+      border: .5rex solid;
+    }
+
+    .sharp {
+      background-color: #F66;
+    }
+
+    .flat {
+      background-color: #66F;
+    }
+
+    .double-sharp {
+      background-color: #FAA;
+    }
+
+    .double-flat {
+      background-color: #AAF;
+    }
+
+    .natural {
+      background-color: lightgray;
+    }
+
+    .double {
+      background: repeating-linear-gradient(60deg,
+          #FAA,
+          #FAA 50%,
+          #AAF 50%,
+          #AAF 100%);
+    }
+  </style>
+
+  <script>
+    const divisor = 31;
+    const context = new AudioContext();
+
+    const oscillators = {};
+    const gains = {};
+
+    const colour1 = "lightgray";
+    const colour2 = "gray";
+    const klassNames = [
+      "C",
+      "B𝄪D𝄫",
+      "C♯",
+      "D♭",
+      "C𝄪",
+      "D",
+      "E𝄫",
+      "D♯",
+      "E♭",
+      "D𝄪",
+      "E",
+      "F♭",
+      "E♯",
+      "F",
+      "E𝄪G𝄫",
+      "F♯",
+      "G♭",
+      "F𝄪",
+      "G",
+      "A𝄫",
+      "G♯",
+      "A♭",
+      "G𝄪",
+      "A",
+      "B𝄫",
+      "A♯",
+      "B♭",
+      "A𝄪C𝄫",
+      "B",
+      "C♭",
+      "B♯",
+    ];
+
+    const classNameOfKlass = klass =>
+      /♯/.test(klassNames[klass])
+        ? 'sharp'
+        : /♭/.test(klassNames[klass])
+          ? 'flat'
+          : /𝄪/.test(klassNames[klass]) && !/𝄫/.test(klassNames[klass])
+            ? 'double-sharp'
+            : !/𝄪/.test(klassNames[klass]) && /𝄫/.test(klassNames[klass])
+              ? 'double-flat'
+              : /𝄪/.test(klassNames[klass]) && /𝄫/.test(klassNames[klass])
+                ? 'double'
+                : 'natural'
+
+    const keyboard = [
+      [...'1234567890-='],
+      [...'qwertyuiop[]\\'],
+      [...'asdfghjkl;\''],
+      [...'zxcvbnm,./'],
+    ]
+
+    const klassOfNumber = (number) =>
+      klass = (((number - 8) % divisor) + divisor) % divisor;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const onChange = () => {
+        const divPlayed = document.getElementById("played")
+        divPlayed.innerHTML = "";
+        Object.values(oscillators)
+          .map((o) => o.frequency.value)
+          .sort((a, b) => a - b)
+          .forEach(f => {
+            const span = document.createElement("span");
+            span.textContent = f.toFixed(3);
+            divPlayed.appendChild(span);
+          });
+
+        const numbers = Object.keys(oscillators).map(it => parseInt(it)).sort((a, b) => a - b);
+        const chords = []
+
+        for (const [k, ds] of Object.entries({
+          'sub7': [7, 25],
+          'min7': [8, 26],
+          'neu7': [9, 27],
+          'har7': [10, 25],
+          'maj7': [10, 28],
+          'sup7': [11, 29],
+
+          dim: [8, 16],
+          aug: [10, 20],
+          sub: [7, 18],
+          min: [8, 18],
+          neu: [9, 18],
+          maj: [10, 18],
+          sup: [11, 18],
+        })) {
+          for (const number of numbers)
+            if (
+              ds.every(
+                (d) =>
+                  numbers.includes(number + d - divisor) ||
+                  numbers.includes(number + d) ||
+                  numbers.includes(number + d + divisor)
+              )
+            ) {
+              const chord = `${klassNames[klassOfNumber(number)]
+                }${k}`;
+              if (!chords.includes(chord) && !chords.includes(chord + '7'))
+                chords.push(chord);
+            }
+        }
+
+        const divChord = document.getElementById("chord");
+        divChord.innerHTML = "";
+        for (const c of chords) {
+          const span = document.createElement("span");
+          span.textContent = c;
+          divChord.appendChild(span);
+        }
+
+        draw();
+      };
+
+      const start = (number, frequency) => {
+        if (!oscillators.hasOwnProperty(number)) {
+          const g = new GainNode(context, { gain: 1 / 6 });
+          const o = new OscillatorNode(context, {
+            type: "sine",
+            frequency,
+          });
+
+          o.connect(g);
+          g.connect(analyser);
+          o.start();
+          [oscillators[number], gains[number]] = [o, g];
+          for (const e of document.querySelectorAll(`[data-number="${number}"]`))
+            e.classList.add("played");
+
+          setTimeout(onChange, 50);
+        }
+      };
+
+      const stop = (number) => {
+        if (oscillators.hasOwnProperty(number)) {
+          gains[number].gain.linearRampToValueAtTime(
+            0,
+            context.currentTime + 10 / 1000
+          );
+          oscillators[number].stop(context.currentTime + 20 / 1000);
+          delete oscillators[number];
+          delete gains[number];
+
+          for (const e of document.querySelectorAll(`[data-number="${number}"]`))
+            e.classList.remove("played");
+
+
+          setTimeout(onChange, 75);
+        }
+      };
+
+      const nInline = 16
+      const nBlock = 8;
+
+      Object.assign(
+        document.querySelector(':root').style, {
+        '--n-inline': nInline,
+        '--n-block': nBlock,
+      });
+
+      for (let y = nBlock - 1; 0 <= y; y--) {
+        for (let x = 0; x < nInline; x++) {
+          const number = -3 * (y % 2) - Math.floor(y / 2) + x * 5 - 41;
+          const klass = klassOfNumber(number);
+          const octave = Math.floor((number - 8) / divisor) + 5;
+
+          const freq = 440 * Math.pow(2, number / divisor);
+
+          const button = document.createElement("button");
+          button.classList.add(classNameOfKlass(klass))
+          button.append(klassNames[klass] + octave)
+          button.append(document.createElement('br'))
+          const span = document.createElement('span');
+          span.style.fontSize = 'smaller';
+          span.style.background = 'none';
+          span.classList.add(classNameOfKlass(klass))
+          span.textContent = `${octave},${klass}`
+          button.append(span);
+          button.dataset.number = number;
+
+          if (freq === 440) button.classList.add("a4");
+
+          button.style.gridColumn =
+            y % 2 === 0 && x === nInline - 1 || y % 2 === 1 && x === 0
+              ? 'span 1'
+              : 'span 2';
+
+          const onDown = () => {
+            if (document.getElementById("sustain").checked)
+              if (number in oscillators)
+                stop(number)
+              else
+                start(number, freq);
+            else
+              start(number, freq);
+          };
+          const onUp = () => {
+            if (document.getElementById("sustain").checked) {
+              // pass
+            } else
+              stop(number);
+          };
+
+          if (matchMedia('(pointer:coarse)').matches) {
+            button.onpointerdown = onDown;
+            button.onpointerenter = onDown;
+
+            button.onpointerup = onUp;
+            button.onpointerleave = onUp;
+            button.onpointercancel = onUp;
+          } else {
+            button.onmousedown = onDown;
+
+            button.onmouseup = onUp;
+            button.onmouseleave = onUp;
+          }
+
+          document.addEventListener('keydown', (event) => {
+            if (event.key === keyboard?.[y - 4]?.[x - 7])
+              onDown();
+          });
+          document.addEventListener('keyup', (event) => {
+            if (event.key === keyboard?.[y - 4]?.[x - 7])
+              onUp();
+          });
+
+          document.getElementById("keys").append(button);
+        }
+      }
+
+      const stopAll = () => {
+        for (const number in oscillators) stop(number);
+      };
+
+      document.getElementById("stop-all").onclick = stopAll;
+      document.addEventListener("keypress", (event) => {
+        if (event.key === " ") document.getElementById("stop-all").click();
+        else if (event.key === "Enter") document.getElementById("sustain").click();
+      });
+
+      const analyser = context.createAnalyser();
+      analyser.connect(context.destination);
+
+      analyser.fftSize = 2048;
+      const length = analyser.frequencyBinCount;
+      const array = new Uint8Array(length);
+      analyser.getByteTimeDomainData(array);
+
+      const [canvas] = document.getElementsByTagName("canvas");
+      const rect = canvas.getBoundingClientRect()
+
+      const scale = 1;
+      const canvasContext = canvas.getContext("2d");
+      canvas.height = rect.height * scale
+      canvas.width = rect.width * scale
+
+      const draw = () => {
+        //requestAnimationFrame(draw);
+
+        analyser.getByteTimeDomainData(array);
+        canvasContext.clearRect(0, 0, canvas.width, canvas.height);
+        canvasContext.lineWidth = scale;
+        canvasContext.strokeStyle = "black";
+        canvasContext.lineJoin = "round"
+        canvasContext.beginPath();
+        const sliceWidth = canvas.width / length;
+
+        for (let i = 0; i < length; i++) {
+          const x = canvas.width / length * i
+          const y = array[i] / 128.0 * canvas.height / 2;
+
+          if (i === 0)
+            canvasContext.moveTo(x, y);
+          else
+            canvasContext.lineTo(x, y);
+        }
+
+        canvasContext.stroke();
+      }
+
+      draw();
+
+      for (const name of klassNames) {
+        const div = document.createElement('div')
+        div.classList.add(classNameOfKlass(klassNames.indexOf(name)))
+        div.textContent = name
+        document.getElementById("memo").appendChild(div);
+      }
+    });
+  </script>
+</head>
+
+<body>
+  <canvas id="wave"></canvas>
+  <div id="played"></div>
+  <div id="chord"></div>
+  <button id="stop-all">stop all (space)</button>
+  <label><input id="sustain" type="checkbox" /></input> sustain (enter)</label>
+  <div id="memo"></div>
+  <div id="keys"></div>
+</body>
+
+</html>
