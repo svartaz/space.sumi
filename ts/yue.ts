@@ -7,7 +7,7 @@ export const jyutpingSyllableToObject = (
   final: string;
   tone: number;
   voiced: boolean;
-  text: string;
+  ascii: string;
   compact: string;
 } => {
   let [initial, final, toneString] = syllable
@@ -89,7 +89,7 @@ export const jyutpingSyllableToObject = (
     final,
     tone,
     voiced,
-    text: initial + final + ["", "q", "s", ""][tone],
+    ascii: initial + final + ["", "q", "s", ""][tone],
     compact: /^(g|m)$/.test(initial + final)
       ? initial + final + ["ˋ", "ˊ", "˜", ""][tone]
       : (initial + final)

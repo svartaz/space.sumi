@@ -49,7 +49,7 @@ export const pinyinSyllableToObject = (
   nucleus: string;
   coda: string;
   tone: number;
-  text: string;
+  ascii: string;
   compact: string;
 } => {
   syllable = syllable.toLowerCase().normalize("NFKD");
@@ -105,7 +105,7 @@ export const pinyinSyllableToObject = (
     nucleus: medial && !nucleus && coda ? "e" : "a",
     coda: coda!,
     tone,
-    text: syllable + ["", "h", "q", "s", ""][tone],
+    ascii: syllable + ["", "h", "q", "s", ""][tone],
     compact: (/^[żṫṡrzţs]$/.test(syllable)
       ? syllable + ["ˉ", "ˊ", "ˇ", "ˋ", ""][tone]
       : /[ea]/.test(syllable)

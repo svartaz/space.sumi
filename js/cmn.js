@@ -85,7 +85,7 @@ export const pinyinSyllableToObject = (syllable) => {
         nucleus: medial && !nucleus && coda ? "e" : "a",
         coda: coda,
         tone,
-        text: syllable + ["", "h", "q", "s", ""][tone],
+        ascii: syllable + ["", "h", "q", "s", ""][tone],
         compact: (/^[żṫṡrzţs]$/.test(syllable)
             ? syllable + ["ˉ", "ˊ", "ˇ", "ˋ", ""][tone]
             : /[ea]/.test(syllable)

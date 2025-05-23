@@ -1,3 +1,8 @@
+export const chunks = <A>(they: A[], length: number): A[][] =>
+  they.length <= length
+    ? [they]
+    : [they.slice(0, length), ...chunks(they.slice(length), length)];
+
 export const chooseRandom = <A>(they: A[]): A =>
   they[Math.random() * they.length]!;
 
