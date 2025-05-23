@@ -1,0 +1,33 @@
+<html>
+  <head>
+    <title>ziagki notation</title>
+
+    <script type="module">
+      import { codeToTable } from "/js/ziagki.js";
+
+      const initial = "LNSGKGSNL1B5R1PPPPPPPPP27ppppppppp1r5b1lnsgkgsnl";
+      document
+        .getElementById("board")
+        .replaceWith(
+          codeToTable(
+            new URLSearchParams(window.location.search).get("n") ?? initial
+          )
+        );
+    </script>
+
+    <style>
+      body {
+        display: flex;
+        justify-content: space-evenly;
+        align-items: center;
+        font-size: 200%;
+      }
+      table {
+        font-size: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="board"></div>
+  </body>
+</html>

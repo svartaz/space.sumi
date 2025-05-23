@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="module">
+      import { applyStyle, styles } from "/js/string.js";
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const [from, to] = document.getElementsByTagName("textarea");
+        const [select] = document.getElementsByTagName("select");
+
+        for (const style in styles) {
+          const option = document.createElement("option");
+          option.value = style;
+          option.innerText = style;
+
+          select.appendChild(option);
+        }
+
+        const onInput = () => {
+          if (select.value) to.value = applyStyle(from.value, select.value);
+        };
+
+        for (const element of [select, from])
+          element.addEventListener("input", onInput);
+
+        onInput();
+      });
+    </script>
+
+    <style>
+      html,
+      body {
+        inline-size: 100%;
+        block-size: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        display: grid;
+        font-family: serif;
+        font-size: xx-large;
+      }
+
+      textarea {
+        resize: none;
+        outline: none;
+        font: inherit;
+      }
+
+      @media (orientation: landscape) {
+        body {
+          grid-template-columns: 1fr 1fr;
+          grid-template-rows: 2em 1fr;
+        }
+        select {
+          grid-column: 1 / 3;
+          grid-row: 1;
+        }
+      }
+      @media (orientation: portrait) {
+        body {
+          grid-template-columns: 1fr;
+          grid-template-rows: 1fr 2em 1fr;
+        }
+        select {
+          grid-row: 2;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <select></select>
+    <textarea>the quick brown fox jumps over the lazy dog</textarea>
+    <textarea readonly></textarea>
+  </body>
+</html>

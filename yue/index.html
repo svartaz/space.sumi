@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>latinise yue</title>
+    <meta name="keywords" content="cantonese" />
+    <meta name="author" content="sumi.space" />
+
+    <script>
+      var exports = {};
+    </script>
+    <script
+      src="https://unpkg.com/to-jyutping@3.1.1"
+      type="module"
+      defer
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/tshet-uinh@0.15.1"></script>
+
+    <script type="module">
+      import { replaceEach } from "/js/string.js";
+      import { jyutpingSyllableToObject } from "/js/yue.js";
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const [from, to] = document.getElementsByTagName("textarea");
+
+        const onInput = (event) => {
+          to.value = event.target.value.replace(/\p{sc=Han}+/gu, (it) =>
+            exports
+              .getJyutpingList(it)
+              .map(([letter, read]) =>
+                read === null
+                  ? "\t" + letter + "\t"
+                  : jyutpingSyllableToObject(read, letter, TshetUinh).compact
+              )
+              .join(" ")
+              .replace(/ \t|\t /g, "")
+          );
+        };
+        from.addEventListener("input", onInput);
+
+        document
+          .getElementsByTagName("input")[0]
+          .addEventListener("click", (event) => {
+            event.target.disabled = true;
+
+            window.speechSynthesis.cancel();
+
+            const u = new SpeechSynthesisUtterance(from.value);
+            u.lang = "zh-HK";
+            u.volume = 1;
+
+            const voices = window.speechSynthesis
+              .getVoices()
+              .filter((it) => it.lang === u.lang);
+            for (const f of [
+              (it) => it.name.includes("Google"),
+              (it) => it.voiceURI.includes("com.apple.voice."),
+            ]) {
+              const filtered = voices.filter(f);
+              if (1 <= filtered.length) {
+                u.voice = filtered[0];
+                break;
+              }
+            }
+            u.onend = () => {
+              event.target.disabled = false;
+            };
+            window.speechSynthesis.speak(u);
+          });
+
+        // https://www.ohchr.org/sites/default/files/UDHR/Documents/UDHR_Translations/yue.pdf
+        from.value =
+          "人人生而平等, 喺尊嚴同埋權利上一律平等.\n佢哋有理性同埋良心, 而且應當以兄弟關係嘅精神相對待.";
+        onInput({ target: from });
+      });
+    </script>
+
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@200..900&family=Noto+Serif:ital,wght@0,100..900;1,100..900&display=swap");
+
+      html,
+      body {
+        inline-size: 100%;
+        block-size: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        display: grid;
+        font-family: "Noto Serif", "Noto Serif TC", serif;
+        font-size: xx-large;
+      }
+
+      textarea {
+        scale: none;
+        outline: none;
+        font: inherit;
+      }
+
+      @media (orientation: landscape) {
+        body {
+          grid-template-columns: 1fr 1fr;
+          grid-template-rows: 2em 1fr;
+        }
+        input {
+          grid-column: 1 / 3;
+          grid-row: 1;
+        }
+      }
+      @media (orientation: portrait) {
+        body {
+          grid-template-columns: 1fr;
+          grid-template-rows: 1fr 2em 1fr;
+        }
+        input {
+          grid-row: 2;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <input type="button" value="⏵" />
+    <textarea></textarea>
+    <textarea readonly></textarea>
+  </body>
+</html>
