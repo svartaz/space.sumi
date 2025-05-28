@@ -5,14 +5,16 @@
     <script type="module">
       import { codeToTable } from "/js/ziagki.js";
 
-      const initial = "LNSGKGSNL1B5R1PPPPPPPPP27ppppppppp1r5b1lnsgkgsnl";
-      document
-        .getElementById("board")
-        .replaceWith(
-          codeToTable(
-            new URLSearchParams(window.location.search).get("n") ?? initial
-          )
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get("_");
+      if (code) document.getElementById("board").replaceWith(codeToTable(code));
+      else {
+        url.searchParams.set(
+          "_",
+          "LNSGKGSNL1B5R1PPPPPPPPP27ppppppppp1r5b1lnsgkgsnl"
         );
+        window.location.href = url.toString();
+      }
     </script>
 
     <style>
