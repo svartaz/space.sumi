@@ -66,17 +66,17 @@ export const pinyinSyllableToObject = (syllable) => {
         [/o(?=ng)/, "u"],
         [/o/, "e"],
         [/(?<=[iyu])e(?=[iu]|ng?)/, ""],
-        [/^zh/, "ż"],
-        [/^ch/, "ṫ"],
-        [/^sh/, "ṡ"],
+        [/^zh/, "ẓ"],
+        [/^ch/, "ṭ"],
+        [/^sh/, "ṣ"],
         [/^z/, "z"],
         [/^c/, "ţ"],
         [/^g/, "c"],
         [/ng(?=r?$)/, "g"],
-        [/(?<=^[żṫṡzţs])i/g, ""],
+        //[/(?<=^[ẓṭṣzţs])i/g, ""],
     ]);
     const [initial, medial, nucleus, coda] = syllable
-        .match(/^([ckhżṫṡrzţsldtnbpfm]?)([iyu]?)([ea]?)([iugn]?r?)$/)
+        .match(/^([ckhẓṭṣrzţsldtnbpfm]?)([iyu]?)([ea]?)([iugn]?r?)$/)
         .slice(1);
     const diacritics = ["\u0304", "\u0301", "\u030C", "\u0300", ""];
     return {
@@ -86,7 +86,7 @@ export const pinyinSyllableToObject = (syllable) => {
         coda: coda,
         tone,
         ascii: syllable + ["", "h", "q", "s", ""][tone],
-        compact: (/^[żṫṡrzţs]$/.test(syllable)
+        compact: (/^[ẓṭṣrzţs]$/.test(syllable)
             ? syllable + ["ˉ", "ˊ", "ˇ", "ˋ", ""][tone]
             : /[ea]/.test(syllable)
                 ? syllable.replace(/(?<=[ea])/, diacritics[tone])

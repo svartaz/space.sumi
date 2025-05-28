@@ -50,16 +50,21 @@ export const codeToTable = (code, showsNumber = false) => {
     main.reverse().forEach((row, i) => {
         const tr = document.createElement("tr");
         row.forEach((cell, j) => {
+            const index = `${j}${8 - i}`;
             const td = document.createElement("td");
             td.style.position = "relative";
+            td.dataset.ziagkiIndex = index;
             if (cell) {
-                td.textContent = cell.expr;
-                td.dataset.first = cell.first.toString();
-                td.dataset.promoted = cell.promoted.toString();
+                td.textContent = cell.kind;
+                td.dataset.ziagkiFirst = cell.first.toString();
+                td.dataset.ziagkiPromoted = cell.promoted.toString();
+                if (cell.promoted)
+                    td.style.textDecoration = "underline";
+                //if (!cell.first) td.style.transform = "rotate(180deg)";
             }
             if (showsNumber || true) {
                 const div = document.createElement("div");
-                div.textContent = `${8 - i}${j}`;
+                div.textContent = index;
                 Object.assign(div.style, {
                     fontSize: "calc(100% / 3)",
                     color: "lightgray",
@@ -100,13 +105,13 @@ export const codeToTable = (code, showsNumber = false) => {
     assignStyle(table, "td:nth-of-type(4), td:nth-of-type(7)", {
         borderInlineStart: "1px solid",
     });
-    assignStyle(table, "td[data-first='true']", {
+    assignStyle(table, "td[data-ziagki-first='true']", {
         backgroundPosition: "center",
         backgroundImage: "linear-gradient(0deg, lightgray, lightgray 12.5%, transparent 12.5%)",
     });
-    assignStyle(table, "td[data-first='false']", {
+    assignStyle(table, "td[data-ziagki-first='false']", {
         backgroundPosition: "center",
-        backgroundImage: "linear-gradient(180deg, lightgray, lightgray 12.5%, transparent 12.5%)",
+        backgroundImage: "linear-gradient(0deg, transparent, transparent 87.5%, lightgray 87.5%)",
     });
     return table;
 };
