@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const context = new (window.AudioContext ||
+          window.webkitAudioContext)();
+        const oscillators = {};
+
+        for (const td of document.querySelectorAll("td")) {
+          const iMode = td.parentElement.rowIndex;
+          const iChord = td.cellIndex - 1;
+
+          const triad = document.createElement("button");
+          const tetrad = document.createElement("button");
+
+          triad.dataset.name = td.textContent
+            .replace(/\.(io|mi)4$/, ".io")
+            .replace(/\.lo4$/, ".lo")
+            .replace(/\.ae4$/, ".ae");
+          tetrad.dataset.name = td.textContent;
+          td.textContent = "";
+
+          td.dataset.index = (iChord + iMode) % 7;
+
+          const divWrap = document.createElement("div");
+          td.appendChild(divWrap);
+          divWrap.appendChild(triad);
+          divWrap.appendChild(tetrad);
+        }
+
+        // set up each div
+        for (const button of document.querySelectorAll("td > div > button")) {
+          const [root, kind] = button.dataset.name.split(".");
+
+          const pitches = {
+            lo: [0, 3, 6],
+            ae: [0, 3, 7],
+            io: [0, 4, 7],
+
+            lo4: [0, 3, 6, 10],
+            ae4: [0, 3, 7, 10],
+            io4: [0, 4, 7, 11],
+            mi4: [0, 4, 7, 10],
+          }[kind].map(
+            (it) =>
+              it +
+              {
+                c: 0,
+                "d-": 1,
+                d: 2,
+                "e-": 3,
+                e: 4,
+                f: 5,
+                "f+": 6,
+                "g-": 6,
+                g: 7,
+                "a-": 8,
+                a: 9,
+                "b-": 10,
+                b: 11,
+              }[root]
+          );
+
+          button.append(root + ".");
+
+          const spanKind = document.createElement("span");
+          spanKind.dataset.kind = kind;
+          spanKind.textContent = kind;
+          button.append(spanKind);
+
+          button.append(document.createElement("br"));
+          button.append(`(${pitches.join(" ")})`);
+
+          button.addEventListener("pointerdown", () => {
+            for (const { o, gain } of oscillators[button] ?? []) {
+              gain.gain.setTargetAtTime(0, context.currentTime, 0.03);
+              o.stop(context.currentTime + 0.05);
+            }
+
+            oscillators[button] = [];
+            for (const pitch of pitches) {
+              const o = context.createOscillator();
+              o.type = "sine";
+              o.frequency.value = 261.626 * Math.pow(2, pitch / 12);
+
+              const gain = context.createGain();
+              gain.gain.value = 1 / (pitches.indexOf(pitch) + 3);
+              gain.connect(context.destination);
+              o.connect(gain);
+              o.start();
+
+              oscillators[button].push({ o, gain });
+            }
+          });
+
+          for (const event of ["pointerup", "pointercancel", "pointerleave"]) {
+            button.addEventListener(event, () => {
+              for (const { o, gain } of oscillators[button] ?? []) {
+                gain.gain.setTargetAtTime(0, context.currentTime, 0.03);
+                o.stop(context.currentTime + 0.05);
+              }
+            });
+          }
+        }
+      });
+    </script>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      :root {
+        --color0: hsl(calc(360deg * 0 / 7), 100%, calc(100% * 3 / 4));
+        --color1: hsl(calc(360deg * 1 / 7), 100%, calc(100% * 3 / 4));
+        --color2: hsl(calc(360deg * 2 / 7), 100%, calc(100% * 3 / 4));
+        --color3: hsl(calc(360deg * 3 / 7), 100%, calc(100% * 3 / 4));
+        --color4: hsl(calc(360deg * 4 / 7), 100%, calc(100% * 3 / 4));
+        --color5: hsl(calc(360deg * 5 / 7), 100%, calc(100% * 3 / 4));
+        --color6: hsl(calc(360deg * 6 / 7), 100%, calc(100% * 3 / 4));
+      }
+
+      html,
+      body {
+        inline-size: 100%;
+        block-size: 100%;
+        margin: 0;
+      }
+
+      body {
+        font-family: sans-serif;
+      }
+
+      table {
+        margin: 0;
+        border-spacing: 1em;
+        inline-size: 100%;
+        block-size: 100%;
+        table-layout: fixed;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      tr:nth-of-type(1) th {
+        background-color: var(--color0);
+      }
+      tr:nth-of-type(2) th {
+        background-color: var(--color1);
+      }
+      tr:nth-of-type(3) th {
+        background-color: var(--color2);
+      }
+      tr:nth-of-type(4) th {
+        background-color: var(--color3);
+      }
+      tr:nth-of-type(5) th {
+        background-color: var(--color4);
+      }
+      tr:nth-of-type(6) th {
+        background-color: var(--color5);
+      }
+      tr:nth-of-type(7) th {
+        background-color: var(--color6);
+      }
+
+      th {
+        inline-size: fit-content;
+      }
+
+      th,
+      td {
+        padding: 0;
+        text-align: center;
+        vertical-align: middle;
+      }
+
+      td {
+      }
+
+      td[data-index="0"] {
+        border: 0.125rem solid gray;
+      }
+      td[data-index="4"] {
+        border: 0.125rem dotted gray;
+      }
+
+      td > div {
+        block-size: 100%;
+        display: flex;
+        gap: 0.125rem;
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      button {
+        border: none;
+        flex-grow: 1;
+        background-color: whitesmoke;
+      }
+
+      button:active {
+        background-color: gainsboro;
+      }
+
+      button span[data-kind] {
+        font-weight: bolder;
+      }
+      button span[data-kind^="io"] {
+        color: var(--color0);
+      }
+      button span[data-kind^="mi"] {
+        color: var(--color4);
+      }
+      button span[data-kind^="ae"] {
+        color: var(--color5);
+      }
+      button span[data-kind^="lo"] {
+        color: var(--color6);
+      }
+    </style>
+  </head>
+  <body>
+    <table>
+      <tr>
+        <th>ion</th>
+        <td>c.io4</td>
+        <td>d.ae4</td>
+        <td>e.ae4</td>
+        <td>f.io4</td>
+        <td>g.mi4</td>
+        <td>a.ae4</td>
+        <td>b.lo4</td>
+      </tr>
+      <tr>
+        <th>dor</th>
+        <td>c.ae4</td>
+        <td>d.ae4</td>
+        <td>e-.io4</td>
+        <td>f.mi4</td>
+        <td>g.ae4</td>
+        <td>a.lo4</td>
+        <td>b-.io4</td>
+      </tr>
+      <tr>
+        <th>phryg</th>
+        <td>c.ae4</td>
+        <td>d-.io4</td>
+        <td>e-.mi4</td>
+        <td>f.ae4</td>
+        <td>g.lo4</td>
+        <td>a-.io4</td>
+        <td>b-.ae4</td>
+      </tr>
+      <tr>
+        <th>lyd</th>
+        <td>c.io4</td>
+        <td>d.mi4</td>
+        <td>e.ae4</td>
+        <td>f+.lo4</td>
+        <td>g.io4</td>
+        <td>a.ae4</td>
+        <td>b.ae4</td>
+      </tr>
+      <tr>
+        <th>mixolyd</th>
+        <td>c.mi4</td>
+        <td>d.ae4</td>
+        <td>e.lo4</td>
+        <td>f.io4</td>
+        <td>g.ae4</td>
+        <td>a.ae4</td>
+        <td>b-.io4</td>
+      </tr>
+      <tr>
+        <th>aeol</th>
+        <td>c.ae4</td>
+        <td>d.lo4</td>
+        <td>e-.io4</td>
+        <td>f.ae4</td>
+        <td>g.ae4</td>
+        <td>a-.io4</td>
+        <td>b-.mi4</td>
+      </tr>
+      <tr>
+        <th>locr</th>
+        <td>c.lo4</td>
+        <td>d-.io4</td>
+        <td>e-.ae4</td>
+        <td>f.ae4</td>
+        <td>g-.io4</td>
+        <td>a-.mi4</td>
+        <td>b-.ae4</td>
+      </tr>
+    </table>
+  </body>
+</html>

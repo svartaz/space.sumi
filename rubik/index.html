@@ -1,0 +1,113 @@
+<html>
+  <head>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        for (const div of document.querySelectorAll(".face")) {
+          const table = document.createElement("table");
+          table.classList.add("face");
+
+          for (const row of div.dataset.face.match(/.{1,3}/g)) {
+            const tr = document.createElement("tr");
+
+            for (const char of row) {
+              const td = document.createElement("td");
+              td.textContent = char;
+              tr.appendChild(td);
+            }
+            table.appendChild(tr);
+          }
+
+          div.replaceWith(table);
+        }
+      });
+    </script>
+
+    <style>
+      .face {
+        font-family: monospace;
+        text-align: center;
+        border-collapse: collapse;
+      }
+
+      .face td {
+        border: 1px solid;
+        inline-size: 1.5em;
+        block-size: 1.5em;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>rubik</h1>
+
+    <table>
+      <tr>
+        <td>F は</td>
+        <td>
+          <div class="face" data-face=" → ↑↻↓ ← "></div>
+        </td>
+        <td>
+          <div class="face" data-face=" ← ↓↺↑ → "></div>
+        </td>
+        <td>f ひ</td>
+      </tr>
+      <tr>
+        <td>R ら</td>
+        <td>
+          <div class="face" data-face="  ↑  ↑  ↑"></div>
+        </td>
+        <td>
+          <div class="face" data-face="  ↓  ↓  ↓"></div>
+        </td>
+        <td>r り</td>
+      </tr>
+      <tr>
+        <td>U わ</td>
+        <td>
+          <div class="face" data-face="←←←      "></div>
+        </td>
+        <td>
+          <div class="face" data-face="→→→      "></div>
+        </td>
+        <td>u ゐ</td>
+      </tr>
+    </table>
+
+    <table>
+      <tr>
+        <td></td>
+        <td></td>
+        <td>白面十字を下へ持ち直す</td>
+      </tr>
+      <tr>
+        <td>白面</td>
+        <td><code>RUr</code></td>
+        <td>白を含む角を白面へ</td>
+      </tr>
+      <tr>
+        <td>中段</td>
+        <td><code>U(RUr)u(fuF)</code></td>
+        <td>正面上から正面右へ</td>
+      </tr>
+      <tr>
+        <td>黃面十字</td>
+        <td><code>F(RUr)uf</code></td>
+        <td>上面左上に鉤字が出たら上面右下へ持ち直す</td>
+      </tr>
+      <tr>
+        <td>黃面</td>
+        <td><code>(RUr)URUUr</code></td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>上段左右</td>
+        <td><code>(RUr)urFRRuru(RUr)f</code></td>
+        <td>揃った面を左へ持ち直す. 各側面左上と右上</td>
+      </tr>
+      <tr>
+        <td>完成</td>
+        <td><code>RuRURURururr</code></td>
+        <td>完成した面を後へ持ち直す</td>
+      </tr>
+    </table>
+  </body>
+</html>
