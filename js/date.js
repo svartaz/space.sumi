@@ -1,6 +1,6 @@
-import { divisorCommonMax } from "./math.js";
+import { divisorCommonMax } from "./math";
 export const yearIsLeap = (year) => (0 === year % 4 && 0 !== year % 100) || 0 === year % 400;
-export const yearToDays = (year) => yearIsLeap(year) ? 366 : 365;
+export const yearToMaxDay = (year) => yearIsLeap(year) ? 366 : 365;
 export const dateIsDst = (date) => {
     const year = date.getFullYear();
     const zone0 = new Date(year, 0, 1).getTimezoneOffset();
@@ -17,7 +17,7 @@ export const dateToObject = (date) => {
     const commonFactor = Math.abs(divisorCommonMax(zone, 24 * 60));
     return {
         isLeap,
-        daysInYear: yearToDays(year),
+        daysInYear: yearToMaxDay(year),
         zoneOver: zone / commonFactor,
         zoneUnder: (24 * 60) / commonFactor,
         zoneOver96: (zone * 96) / 1440,

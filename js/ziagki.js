@@ -1,5 +1,5 @@
-import { chunks } from "./array.js";
-import { assignStyle } from "./html.js";
+import { chunks } from "./array";
+import { assignStyle } from "./html";
 export const codeToTakens = (code) => [...code.matchAll(/([plnsgbrk])(\d*)/g)].flatMap(([_full, kind, number]) => Array(number ? parseInt(number) : 1).fill(kind.toUpperCase()));
 const codeToBoard = (code) => {
     const [codeMain, codeFirst, codeSecond] = code.split(",");

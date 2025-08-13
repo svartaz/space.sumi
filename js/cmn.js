@@ -1,4 +1,4 @@
-import { replaceEach } from "./string.js";
+import { replaceEach } from "./string";
 export const pinyinToSyllables = (text) => {
     const vowel = "īíǐìiǖǘǚǜüūúǔùuēéěèeōóǒòoāáǎàa";
     const toned = vowel.replace(/[iüueoa]/g, "");

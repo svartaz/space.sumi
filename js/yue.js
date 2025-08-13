@@ -1,4 +1,4 @@
-import { replaceEach } from "./string.js";
+import { replaceEach } from "./string";
 export const jyutpingSyllableToObject = (syllable, hanz = null, TshetUinh = null) => {
     let [initial, final, toneString] = syllable
         .toLowerCase()

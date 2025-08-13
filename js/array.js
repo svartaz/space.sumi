@@ -1,8 +1,8 @@
-export const chunks = (they, length) => they.length <= length
-    ? [they]
-    : [they.slice(0, length), ...chunks(they.slice(length), length)];
-export const chooseRandom = (they) => they[Math.random() * they.length];
-export const shuffle = (they) => they
+export const chunks = (things, length) => things.length <= length
+    ? [things]
+    : [things.slice(0, length), ...chunks(things.slice(length), length)];
+export const chooseRandom = (things) => things[Math.random() * things.length];
+export const shuffle = (things) => things
     .map((it) => ({ it, value: Math.random() }))
     .sort((a, b) => a.value - b.value)
     .map(({ it }) => it);
