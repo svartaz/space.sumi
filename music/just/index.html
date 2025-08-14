@@ -1,42 +1,35 @@
 <html>
   <head>
     <script>
-      const primes = [2];
-      const primeNth = (i) => {
-        while (primes.length <= i)
-          for (let p = 3; ; p += 2) {
-            if (primes.every((prime) => p % prime !== 0)) {
-              primes.push(p);
-              break;
-            }
-          }
-
-        return primes[i];
+      const arraySubtract = (a, b) => {
+        const result = [];
+        for (let i = 0; i < Math.max(a.length, b.length); i++)
+          result[i] = (a[i] || 0) - (b[i] || 0);
+        return result;
       };
 
       const textToData = (text) => {
         const [lineHz, ...lines] = text
           .replace(" ", "")
           .split("\n")
-          .map((line) => line.replace(/#.+/, ""))
+          .map((line) => line.trim().replace(/#.+/, ""))
           .filter((line) => line !== "");
 
         return [
           parseFloat(lineHz),
           lines.map((line) => {
             const muted = line.startsWith("m");
-            line = line.replace(/^m/, "");
+            line = line.replace(/^m */, "");
 
-            const exponents = line
-              .split(",")
-              .map((numberString) => parseInt(numberString) || 0);
-            const product = exponents
-              .map((exponent, i) => primeNth(i) ** exponent)
+            const product = line
+              .split(/ +/g)
+              .map((it) =>
+                it.startsWith("/") ? 1 / Number(it.slice(1)) : Number(it)
+              )
               .reduce((a, b) => a * b, 1);
 
             return {
               muted,
-              exponents,
               product,
               productLog2: Math.log2(product),
             };
@@ -52,54 +45,43 @@
         const canvas = document.querySelector("canvas");
         const canvasContext = canvas.getContext("2d");
         canvasContext.imageSmoothingEnabled = false;
+        canvas.width = canvas.getBoundingClientRect().width;
+        canvas.height = canvas.getBoundingClientRect().height;
 
-        const height = 12;
-        const asY = (number) =>
-          canvas.height * (1 / 2 - Math.log2(number) / height);
-
-        const defaultCanvas = () => {
-          canvasContext.fillStyle = "white";
-          canvasContext.fillRect(0, 0, canvas.width, canvas.height);
-
-          for (let e = -height / 2 + 1; e < height / 2; e++) {
-            canvasContext.lineWidth = 1;
-            canvasContext.strokeStyle = "lightgray";
-            canvasContext.moveTo(0, asY(Math.pow(2, e)));
-            canvasContext.lineTo(canvas.width, asY(Math.pow(2, e)));
-            canvasContext.stroke();
-          }
-        };
-
-        const widthBar = canvas.width / 96;
         const onInput = () => {
           // reset
-          while (oscillators.length) oscillators.pop().stop();
-          defaultCanvas();
+          while (oscillators.length) {
+            const { oscillator, gain } = oscillators.pop();
+            gain.gain.setTargetAtTime(0, audioContext.currentTime, 0.03);
+            oscillator.stop(audioContext.currentTime + 0.05);
+          }
 
           const [hz, data] = textToData(
             document.querySelector("textarea").value
           );
-          const lengthExponents = Math.max(
-            ...data.map(({ exponents }) => exponents.length)
-          );
 
-          const table = document.createElement("table");
-          const tr = document.createElement("tr");
-          tr.appendChild(document.createElement("th"));
-          for (let indexTh = 0; indexTh < lengthExponents; indexTh++) {
-            const th = document.createElement("th");
-            th.textContent = `${primeNth(indexTh)}^`;
-            tr.appendChild(th);
+          const log2Max = Math.max(1, ...data.map((it) => it.productLog2));
+          const log2Min = Math.min(1, ...data.map((it) => it.productLog2));
+
+          const height = 12;
+
+          // fit log2 value in min to max range
+          const asY = (number) =>
+            (canvas.height * (Math.log2(number) - log2Min)) /
+            (log2Max - log2Min);
+
+          canvasContext.clearRect(0, 0, canvas.width, canvas.height);
+          for (let e = -100; e < 101; e++) {
+            canvasContext.lineWidth = 1;
+            canvasContext.strokeStyle = "lightgray";
+            canvasContext.beginPath();
+            canvasContext.moveTo(0, asY(2 ** e));
+            canvasContext.lineTo(canvas.width, asY(2 ** e));
+            canvasContext.stroke();
+            canvasContext.closePath();
           }
-          const thProduct = document.createElement("th");
-          thProduct.textContent = "prod";
-          tr.appendChild(thProduct);
-          const thProductLog2 = document.createElement("th");
-          thProductLog2.textContent = "log2";
-          tr.appendChild(thProductLog2);
-          tr.appendChild(document.createElement("th"));
-          table.append(tr);
 
+          const tbody = document.createElement("tbody");
           data.forEach(
             ({ muted, exponents, product, productLog2 }, indexTone) => {
               // sound
@@ -108,14 +90,14 @@
                 o.type = "sine";
                 o.frequency.value = hz * product;
 
-                const gain = audioContext.createGain();
-                gain.gain.value = 1 / (data.length + 1);
-                gain.connect(audioContext.destination);
+                const g = audioContext.createGain();
+                g.gain.value = 1 / (data.filter((it) => !it.muted).length + 1);
+                g.connect(audioContext.destination);
 
-                o.connect(gain);
+                o.connect(g);
                 o.start();
 
-                oscillators.push(o);
+                oscillators.push({ oscillator: o, gain: g });
               }
 
               // table
@@ -125,12 +107,6 @@
               th.textContent = `tone ${indexTone}`;
               tr.append(th);
 
-              for (let indexTd = 0; indexTd < lengthExponents; indexTd++) {
-                const td = document.createElement("td");
-                td.textContent = exponents[indexTd] || 0;
-                tr.append(td);
-              }
-
               const tdProduct = document.createElement("td");
               tdProduct.textContent = product;
               tr.append(tdProduct);
@@ -138,15 +114,15 @@
               tdProductLog2.textContent = parseFloat(productLog2.toFixed(3));
               tr.append(tdProductLog2);
 
-              table.append(tr);
-              document.querySelector("table").replaceWith(table);
+              tbody.append(tr);
+              document.querySelector("tbody").replaceWith(tbody);
 
               // canvas
-              let x = (canvas.width * (indexTone + 1)) / (data.length + 1);
+              const widthBar = canvas.width / data.length;
               if (product === 1) {
                 canvasContext.beginPath();
                 canvasContext.arc(
-                  x + widthBar / 2,
+                  widthBar * (indexTone + 0.5),
                   asY(1),
                   widthBar / 2,
                   0,
@@ -154,41 +130,22 @@
                 );
                 canvasContext.fillStyle = muted ? "lightgray" : "gray";
                 canvasContext.fill();
-              }
-
-              let productCurrent = 1;
-              for (let indexExponent = 0; indexExponent < exponents.length; ) {
-                if (exponents[indexExponent] === 0) {
-                  indexExponent++;
-                  continue;
-                }
-
-                const direction = exponents[indexExponent] < 0 ? "down" : "up";
-                const productNew =
-                  direction === "down"
-                    ? productCurrent / primes[indexExponent]
-                    : productCurrent * primes[indexExponent];
-
-                if (direction === "down") exponents[indexExponent]++;
-                else exponents[indexExponent]--;
-
+                canvasContext.closePath();
+              } else {
                 canvasContext.fillStyle =
-                  indexExponent === 0
+                  product === 1
                     ? muted
                       ? "lightgray"
                       : "gray"
-                    : `hsl(${
-                        (360 * (indexExponent - 1)) / (primes.length - 1)
-                      }deg 100% 50% / ${muted ? 1 / 4 : 1})`;
+                    : `hsl(${360 * productLog2}deg 100% 50% / ${
+                        muted ? 1 / 4 : 1
+                      })`;
                 canvasContext.fillRect(
-                  x,
-                  asY(productCurrent),
+                  widthBar * indexTone,
+                  asY(1),
                   widthBar,
-                  asY(productNew) - asY(productCurrent)
+                  asY(product) - asY(1)
                 );
-
-                x += widthBar + 1;
-                productCurrent = productNew;
               }
             }
           );
@@ -216,7 +173,7 @@
         font-family: sans-serif;
         display: grid;
         grid-template-columns: 1fr 1fr;
-        grid-template-rows: auto 1fr;
+        grid-template-rows: 1fr 1fr;
         align-items: center;
         justify-items: center;
         gap: 1rem;
@@ -224,9 +181,12 @@
       }
 
       canvas {
-        border: 1px solid black;
-        margin: 0 auto;
         grid-column: span 2;
+        block-size: 100%;
+        inline-size: 100%;
+        aspect-ratio: auto;
+
+        border: 1px solid black;
       }
 
       textarea {
@@ -246,22 +206,40 @@
     </style>
   </head>
   <body>
-    <canvas width="900" height="600"></canvas
+    <canvas></canvas
     ><textarea>
 # #: comment
 # m: muted
 
 # base frequency
-110
+55
 
-# seventh
-m1
-m0,1
-m-1,0,1
-m-2,1,1
-m-1,2
+# dominant seventh
+m4
+m5
+m6
+m7
+
+# major seventh
+m4
+m5
+m6
+m7.5
+
+# minor seventh
+m4
+m4.8
+m6
+m7
 </textarea
     >
-    <table></table>
+    <table>
+      <thead>
+        <th></th>
+        <th>product</th>
+        <th>log2</th>
+      </thead>
+      <tbody></tbody>
+    </table>
   </body>
 </html>
